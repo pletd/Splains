@@ -17,7 +17,7 @@ Test TestFunc[];
 
 struct Table {
     int Size;
-    double A, B; //граничиные условия
+    double A, B; //граничиные условия f`
     double* x;
     double* y;
 
@@ -248,7 +248,7 @@ void BuildSplainGraph(CubicSplain* splains, int numberOfSplains) {
     system("temp.dat");
 }
 
-void BuildSplainGraph(CubicSplain* splains, int numberOfSplains, string origFunc) {
+void BuildSplainGraph(CubicSplain* splains, int numberOfSplains, string origFunc) { //для тестов
     ofstream out("temp.dat");
     out << "f(x)= " << origFunc << "\n";
     for (int i = 0; i < numberOfSplains; i++) {
@@ -267,6 +267,11 @@ void BuildSplainGraph(CubicSplain* splains, int numberOfSplains, string origFunc
 double test1[]{ 0,1,2,3,4,5 };
 double test2[]{-3.14, -2.3, -1.57, -0.75, 0, 1, 2, 3, 3.14};
 double test3[]{0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 3, 4 };
+double test4[]{ 0.1, 0.2, 0.3, 0.5, 1, 2, 4, 12 };
+
+double CalculateFirstDerivative(double (*f)(double), double x, double h) {
+    return (f(x + h) - f(x - h)) / (2 * h);
+}
 
 Test TestFunc[] = {
         { [](double x) { return pow(x,3); },"x**3", test1, 0, 75, 6 },
@@ -275,7 +280,8 @@ Test TestFunc[] = {
         { [](double x) { return (double)1; },"1", test1, 0, 0, 6 },
         { [](double x) { return 4 * pow(x,4) + 3 * pow(x,3) + 2 * pow(x,2) + x + 1; },"4*x**4 + 3*x**3 + 2*x**2 + x + 1",test1, 1, 2246, 6},
         { [](double x) { return sin(x); },"sin(x)", test2, cos(test2[0]), cos(test2[7]), 8},
-        { [](double x) { return log(x); },"log(x)", test3, 1/test3[0], 1/(test3[8]), 9}
+        { [](double x) { return log(x); },"log(x)", test3, 1/test3[0], 1/(test3[8]), 9},
+        { [](double x) { return 1/log(x+1)+x; },"1/log(x+1)+x", test4, 1 - (1 / ((test4[0] + 1) * pow(log(test4[0] + 1),2))), 1 - (1 / ((test4[7] + 1) * pow(log(test4[7] + 1),2))), 8}
 };
 
 int main()
