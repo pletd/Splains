@@ -112,15 +112,52 @@ double* SweepMethod(double* A, double* B, double* C, double* vec, int N) {//prog
     }
     mu[N - 1] = vec[N - 1] / A[N - 1];
     nu[N - 1] = -1 * (B[N - 2] / A[N - 1]);
-    /*for (int i = 0; i < 3; i++) {
-        cout << " Deb mu nu " << mu[i] << " " << nu[i] << " " << i << endl;
-    }*/
     res[N - 1] = (mu[N - 1] + nu[N - 1] * mu[N - 2]) / (1 - nu[N - 1] * nu[N - 2]);
     for (int i = N - 2; i >= 0; i--) {
         res[i] = mu[i] + nu[i] * res[i + 1];
     }   
     return res;
 }
+
+class Splain {
+    double left;
+    double right;
+
+public:
+    Splain() {
+        left = right = 0;
+    }
+
+    Splain(double Left, double Right) {
+        left = Left;
+        right = Right;
+    }
+
+    void SetBorders(double Left, double Right) {
+        left = Left;
+        right = Right;
+    }
+
+    double GetLeftBorder() {
+        return left;
+    }
+
+    double GetRightBorder() {
+        return right;
+    }
+
+    string BordersToString() {
+        stringstream str;
+        str << "[" << left << ":" << right << "]";
+        return str.str();
+    }
+
+    virtual string SplainToString() = 0;
+
+    virtual double operator()(double x) = 0;
+
+    virtual friend ostream& operator<<(ostream& out, Splain const& p) = 0;
+};
 
 class CubicSplain {
     double a;
@@ -153,6 +190,14 @@ public:
         d = D;
     }
 
+    double GetLeftBorder() {
+        return left;
+    }
+
+    double GetRightBorder() {
+        return right;
+    }
+
     string BordersToString() {
         stringstream str;
         str << "[" << left << ":" << right << "]";
@@ -163,6 +208,10 @@ public:
         stringstream str;
         str << d << "*x**3 + " << c << "*x**2 + " << b << "*x + " << a;
         return str.str();
+    }
+
+    double operator()(double x) {
+        return a + b * x + c * pow(x, 2) + d * pow(x, 3);
     }
 
     friend CubicSplain* CalculateCubicSplainInterpolation(Table data);
@@ -217,15 +266,11 @@ CubicSplain* CalculateCubicSplainInterpolation(Table data) {
     for (int i = 0; i < numberOfSplains; i++) {
         coefsA[i] = data.y[i];
         coefsD[i] = (coefsC[i + 1] - coefsC[i]) / (3 * h[i]);
-       // coefsB[i] = 2*h[i] * coefsC[i+1] - 3*h[i] * h[i] * coefsD[i] + (data.y[i + 1] - data.y[i]) / h[i];
         coefsB[i] = (data.y[i + 1] - data.y[i]) / h[i] - h[i] * (coefsC[i + 1] + 2 * coefsC[i]) / 3;
     }
 
-   /* for (int i = 0; i < numberOfSplains; i++) {
-        cout << " deb " << coefsA[i] << " " << coefsB[i] << " " << coefsC[i+1] << " " << coefsD[i] << " " << endl;
-    }*/
-
     for (int i = 0; i < numberOfSplains; i++) {
+        //перевод из виад d(x-x0)**3 + ... в dx**3 + cx**2 +..
         res[i].SetCoef((coefsA[i] - coefsB[i] * res[i].left + coefsC[i] * pow(res[i].left, 2) - coefsD[i] * pow(res[i].left, 3)), (coefsB[i] - 2 * coefsC[i] * res[i].left + 3 * coefsD[i] * pow(res[i].left, 2)), (coefsC[i] - 3 * coefsD[i] * res[i].left), coefsD[i]); //Ddadaadadadada
     }
     return res;
@@ -273,6 +318,24 @@ double CalculateFirstDerivative(double (*f)(double), double x, double h) {
     return (f(x + h) - f(x - h)) / (2 * h);
 }
 
+double CalculateSplainFuncInterpolationError(double (*f)(double), CubicSplain& const splain, unsigned int numberOfPoints ) {
+    double curMaxError = 0;
+    double h = (splain.GetRightBorder() - splain.GetLeftBorder())/numberOfPoints;
+    double curX = splain.GetLeftBorder();
+    double fValue;
+    double splainValue;
+    while(curX < splain.GetRightBorder()){
+        fValue = f(curX);
+        splainValue = splain(curX);
+        if (abs(fValue - splainValue) > curMaxError) {
+            curMaxError = abs(fValue - splainValue);
+        }
+       // cout << curX << " " << curMaxError  << " " << fValue << " " << splainValue << endl;
+        curX += h;
+    }
+    return curMaxError;
+}
+
 Test TestFunc[] = {
         { [](double x) { return pow(x,3); },"x**3", test1, 0, 75, 6 },
         { [](double x) { return pow(x,2); },"x**2", test1, 0, 10, 6 },
@@ -286,6 +349,8 @@ Test TestFunc[] = {
 
 int main()
 {
+    const int numberOfPointsToEstimateError = 20;
+
     int numberOfTests = sizeof(TestFunc) / sizeof(Test);
     int chose;
     do {
@@ -300,6 +365,7 @@ int main()
             CubicSplain* test = CalculateCubicSplainInterpolation(testTable);
             for (int i = 0; i < testTable.Size - 1; i++) {
                 cout << " " << test[i].BordersToString() << " " << test[i].SplainToString() << endl;
+                cout << " max error = " << CalculateSplainFuncInterpolationError(TestFunc[chose - 1].f, test[i], numberOfPointsToEstimateError) << endl;
             }
             BuildSplainGraph(test, TestFunc[chose - 1].N - 1, TestFunc[chose -1 ].fName);
             delete[] test;
@@ -320,6 +386,7 @@ int main()
             }
 
             BuildSplainGraph(splains, test.Size - 1);
+
             delete[] splains;
         }
     } while (File != "0");
