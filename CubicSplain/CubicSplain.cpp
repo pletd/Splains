@@ -100,7 +100,7 @@ struct Table {
     }*/
 };
 
-double* SweepMethod(double* A, double* B, double* C, double* vec, int N) {//progonka 
+double* SweepMethod(double* A, double* B, double* C, double* vec, int N) {//метод трёхточечной прогонки
     double* res = new double[N];
     double* mu = new double[N];
     double* nu = new double[N];
@@ -116,6 +116,8 @@ double* SweepMethod(double* A, double* B, double* C, double* vec, int N) {//prog
     for (int i = N - 2; i >= 0; i--) {
         res[i] = mu[i] + nu[i] * res[i + 1];
     }   
+    delete[] mu;
+    delete[] nu;
     return res;
 }
 
@@ -156,74 +158,51 @@ public:
 
     virtual double operator()(double x) = 0;
 
-    virtual friend ostream& operator<<(ostream& out, Splain const& p) = 0;
+    friend ostream& operator<<(ostream& out, Splain* p);
 };
 
-class CubicSplain {
+ostream& operator<<(ostream& out, Splain* p) {
+    out << p->SplainToString();
+    return out;
+}
+
+
+class CubicSplain : public Splain {
     double a;
     double b;
     double c;
     double d;
-    double left;
-    double right;
 
 public:
-    CubicSplain() {
-        a = b = c = d = left = right = 0;
-    }
-
-    CubicSplain(double Left, double Right) {
+    CubicSplain():Splain() {
         a = b = c = d = 0;
-        left = Left;
-        right = Right;
     }
 
-    void SetBorders(double Left, double Right) {
-        left = Left;
-        right = Right;
+    CubicSplain(double Left, double Right):Splain(Left, Right) {
+        a = b = c = d = 0;
     }
 
-    void SetCoef(double A, double B, double C, double D) {
+    string SplainToString() override {
+        stringstream str;
+        str << d << "*x**3 + " << c << "*x**2 + " << b << "*x + " << a;
+        return str.str();
+    }
+
+    double operator()(double x) override {
+        return a + b * x + c * pow(x, 2) + d * pow(x, 3);
+    }
+
+    void SetCoef(double A, double B, double C, double D) {//to abstract?
         a = A;
         b = B;
         c = C;
         d = D;
     }
 
-    double GetLeftBorder() {
-        return left;
-    }
-
-    double GetRightBorder() {
-        return right;
-    }
-
-    string BordersToString() {
-        stringstream str;
-        str << "[" << left << ":" << right << "]";
-        return str.str();
-    }
-
-    string SplainToString() {
-        stringstream str;
-        str << d << "*x**3 + " << c << "*x**2 + " << b << "*x + " << a;
-        return str.str();
-    }
-
-    double operator()(double x) {
-        return a + b * x + c * pow(x, 2) + d * pow(x, 3);
-    }
-
-    friend CubicSplain* CalculateCubicSplainInterpolation(Table data);
-    friend ostream& operator<<(ostream& out, CubicSplain const& p);
+    friend CubicSplain* CalculateCubicSplainInterpolation(Table& const data);
 };
 
-ostream& operator<<(ostream& out, CubicSplain const& p){
-    out << p.d << "*x**3 + " << p.c << "*x**2 + " << p.b << "*x + " << p.a;
-    return out;
-}
-
-CubicSplain* CalculateCubicSplainInterpolation(Table data) {
+CubicSplain* CalculateCubicSplainInterpolation(Table& const data) {
     int numberOfSplains = data.Size - 1;
     CubicSplain* res = new CubicSplain[numberOfSplains];
     for (int i = 0; i < numberOfSplains; i++) {
@@ -271,13 +250,14 @@ CubicSplain* CalculateCubicSplainInterpolation(Table data) {
 
     for (int i = 0; i < numberOfSplains; i++) {
         //перевод из виад d(x-x0)**3 + ... в dx**3 + cx**2 +..
-        res[i].SetCoef((coefsA[i] - coefsB[i] * res[i].left + coefsC[i] * pow(res[i].left, 2) - coefsD[i] * pow(res[i].left, 3)), (coefsB[i] - 2 * coefsC[i] * res[i].left + 3 * coefsD[i] * pow(res[i].left, 2)), (coefsC[i] - 3 * coefsD[i] * res[i].left), coefsD[i]); //Ddadaadadadada
+        res[i].SetCoef((coefsA[i] - coefsB[i] * res[i].GetLeftBorder() + coefsC[i] * pow(res[i].GetLeftBorder(), 2) - coefsD[i] * pow(res[i].GetLeftBorder(), 3)), (coefsB[i] - 2 * coefsC[i] * res[i].GetLeftBorder() + 3 * coefsD[i] * pow(res[i].GetLeftBorder(), 2)), (coefsC[i] - 3 * coefsD[i] * res[i].GetLeftBorder()), coefsD[i]); //Ddadaadadadada
     }
+    /*for (int i = 0; i < numberOfSplains; i++) {
+        cout << res[i]  << " " << i << endl;
+    }*/
     return res;
-    
 }
 
-//obobshit
 void BuildSplainGraph(CubicSplain* splains, int numberOfSplains) {
     ofstream out("temp.dat");
     for (int i = 0; i < numberOfSplains; i++) {
@@ -309,16 +289,30 @@ void BuildSplainGraph(CubicSplain* splains, int numberOfSplains, string origFunc
     system("temp.dat");
 }
 
+double* GenerateXPoint(double startX, double endX, unsigned int numberOfPoints) {
+    double* points = new double[numberOfPoints];
+    points[0] = startX;
+    double step = (endX - startX) / numberOfPoints;
+    for (int i = 1; i < numberOfPoints -1; i++) {
+        points[i] = points[i - 1] + step;
+    }
+    points[numberOfPoints - 1] = endX;
+    return points;
+}
+
 double test1[]{ 0,1,2,3,4,5 };
+double test1HalvedStep[]{ 0, 0.5, 1, 1.5, 2, 2.5, 3,3.5, 4, 4.5, 5 };
 double test2[]{-3.14, -2.3, -1.57, -0.75, 0, 1, 2, 3, 3.14};
 double test3[]{0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 3, 4 };
 double test4[]{ 0.1, 0.2, 0.3, 0.5, 1, 2, 4, 12 };
+double test4HalvedStep[]{ 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 1, 1.5, 2, 3, 4, 8, 12 };
+
 
 double CalculateFirstDerivative(double (*f)(double), double x, double h) {
     return (f(x + h) - f(x - h)) / (2 * h);
 }
 
-double CalculateSplainFuncInterpolationError(double (*f)(double), CubicSplain& const splain, unsigned int numberOfPoints ) {
+double CalculateSplainFuncInterpolationError(double (*f)(double), Splain& const splain, unsigned int numberOfPoints ) {
     double curMaxError = 0;
     double h = (splain.GetRightBorder() - splain.GetLeftBorder())/numberOfPoints;
     double curX = splain.GetLeftBorder();
@@ -344,7 +338,9 @@ Test TestFunc[] = {
         { [](double x) { return 4 * pow(x,4) + 3 * pow(x,3) + 2 * pow(x,2) + x + 1; },"4*x**4 + 3*x**3 + 2*x**2 + x + 1",test1, 1, 2246, 6},
         { [](double x) { return sin(x); },"sin(x)", test2, cos(test2[0]), cos(test2[7]), 8},
         { [](double x) { return log(x); },"log(x)", test3, 1/test3[0], 1/(test3[8]), 9},
-        { [](double x) { return 1/log(x+1)+x; },"1/log(x+1)+x", test4, 1 - (1 / ((test4[0] + 1) * pow(log(test4[0] + 1),2))), 1 - (1 / ((test4[7] + 1) * pow(log(test4[7] + 1),2))), 8}
+        { [](double x) { return 1/log(x+1)+x; },"1/log(x+1)+x", test4, 1 - (1 / ((test4[0] + 1) * pow(log(test4[0] + 1),2))), 1 - (1 / ((test4[7] + 1) * pow(log(test4[7] + 1),2))), 8},
+        { [](double x) { return 1 / log(x + 1) + x; },"1/log(x+1)+x", test4HalvedStep, 1 - (1 / ((test4HalvedStep[0] + 1) * pow(log(test4HalvedStep[0] + 1),2))), 1 - (1 / ((test4HalvedStep[14] + 1) * pow(log(test4HalvedStep[14] + 1),2))), 15 },
+        { [](double x) { return 4 * pow(x,4) + 3 * pow(x,3) + 2 * pow(x,2) + x + 1; },"4*x**4 + 3*x**3 + 2*x**2 + x + 1", test1HalvedStep, 1, 2246, 11},
 };
 
 int main()
@@ -390,6 +386,8 @@ int main()
             delete[] splains;
         }
     } while (File != "0");
+
+    //abstract splain
 
     return 0;
 }
