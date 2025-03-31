@@ -405,15 +405,16 @@ int main()
         if (chose > 0 && chose <= numberOfTests) {
             Table testTable(TestFunc[chose - 1].f, TestFunc[chose - 1].N, TestFunc[chose - 1].A, TestFunc[chose - 1].B, TestFunc[chose - 1].x);
             testTable.Display();
+            cout << " f(x) = " << TestFunc[chose - 1].fName << endl;
             Splain** test = CalculateCubicSplainInterpolation(testTable, TestFunc[chose-1].type);
             for (int i = 0; i < testTable.Size - 1; i++) {
                 cout << " " << test[i]->BordersToString() << " " << test[i] << endl;
                 cout << " max error = " << CalculateSplainFuncInterpolationError(TestFunc[chose - 1].f, *test[i], numberOfPointsToEstimateError) << endl;
             }
             BuildSplainGraph(test, TestFunc[chose - 1].N - 1, TestFunc[chose -1 ].fName);
-            for (int i = 0; i < testTable.Size - 1; i++) {
+            /*for (int i = 0; i < testTable.Size - 1; i++) {
                 cout << " " << test[i]->BordersToString() << " " << test[i] << endl;
-            }
+            }*/
             delete[] test;
         }
     } while (chose != 0);
@@ -440,6 +441,6 @@ int main()
     
     //include cond type in table?
 
-    //
+    //files with only x y
     return 0;
 }
