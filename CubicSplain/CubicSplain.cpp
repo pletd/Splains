@@ -11,7 +11,7 @@ struct Table {
     double* x;
     double* y;
 
-    Table(string& const TestFileName) {
+    Table(const string& TestFileName) {
         ifstream in;
         in.open(TestFileName);
         if (!in.is_open()) {
@@ -193,10 +193,10 @@ public:
         d = D;
     }
 
-    friend Splain** CalculateCubicSplainInterpolation(Table& const data, BoundaryConditionType type);
+    friend Splain** CalculateCubicSplainInterpolation(const Table& data, BoundaryConditionType type);
 };
 
-Splain** CalculateCubicSplainInterpolation(Table& const data, BoundaryConditionType type) {
+Splain** CalculateCubicSplainInterpolation(const Table& data, BoundaryConditionType type) {
     int numberOfSplains = data.Size - 1;
     CubicSplain* res = new CubicSplain[numberOfSplains];
     for (int i = 0; i < numberOfSplains; i++) {
@@ -287,7 +287,7 @@ void BuildSplainGraph(Splain** splains, int numberOfSplains) {
     system("temp.dat");
 }
 
-void BuildSplainGraph(Splain** splains, int numberOfSplains, string& const origFunc) { //для тестов
+void BuildSplainGraph(Splain** splains, int numberOfSplains, const string& origFunc) { //для тестов
     ofstream out("temp.dat");
     out << "f(x)= " << origFunc << "\n";
     for (int i = 0; i < numberOfSplains; i++) {
@@ -322,7 +322,7 @@ double CalculateSecondDerivative(double (*f)(double), double x, double h) {
     return (f(x + h) - 2 * f(x) + f(x - h)) / pow(h, 2);
 }
 
-double CalculateSplainFuncInterpolationError(double (*f)(double), Splain& const splain, unsigned int numberOfPoints ) {
+double CalculateSplainFuncInterpolationError(double (*f)(double), Splain& splain, unsigned int numberOfPoints ) {
     double curMaxError = 0;
     double h = (splain.GetRightBorder() - splain.GetLeftBorder())/numberOfPoints;
     double curX = splain.GetLeftBorder();
@@ -436,6 +436,8 @@ int main()
             delete[] splains;
         }
     } while (File != "0");
+
+    //smart pointers??
 
     //abstract for splain**?
     
